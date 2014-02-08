@@ -1,0 +1,113 @@
+#!/bin/bash
+# To skip any of these checks touch any of these bypass_* files in the main directory
+#     bypass_pyflakes
+#     bypass_pep8
+#     bypass_jslint
+#     bypass_csslint
+#     bypass_jinja2
+#     bypass_tab_char
+#
+# To bypass PyFlakes checking for a particular line, add '# bypass_pyflakes' as an inline comment
+
+function get_temp_file {
+    export TMPDIR=/tmp  # OSX compat
+    echo `mktemp tmp.pre-commit.XXXXXXXXXX`
+}
+
+src_dir=$PWD
+
+# set the git directories so git commands will work
+export GIT_WORK_TREE=${PWD}
+export GIT_DIR=${PWD}/.git
+
+if [ -n $VIRTUAL_ENV ]; then
+    PATH=$VIRTUAL_ENV/bin:$PATH
+fi
+
+function pyflakes_check {
+    temp_file=$1
+    file=$2
+
+    $src_dir/githooks/pyflakes-bypass.py $temp_file | sed -e "s@${temp_file}@${file}@"
+    return ${PIPESTATUS[0]}
+}
+
+function pep8_check {
+    temp_file=$1
+    file=$2
+
+    ./githooks/pep8/pep8.py --repeat --show-source --statistics --count --ignore=E501,E121,E126,E128 $temp_file | sed -e "s@${temp_file}@${file}@"
+    return ${PIPESTATUS[0]}
+}
+
+function jslint_check {
+    temp_file=$1
+    file=$2
+
+    rhino ./githooks/jslint/jslint.js $temp_file | sed -e "s@${temp_file}@${file}@"
+    return ${PIPESTATUS[0]}
+}
+
+function csslint_check {
+    temp_file=$1
+    file=$2
+
+    csslint_args=`cat ./csslint/csslint_args`
+    rhino ./githooks/csslint/csslint-rhino.js $csslint_args $temp_file | sed -e "s@${temp_file}@${file}@"
+    return ${PIPESTATUS[0]}
+}
+
+function tab_char_check {
+    temp_file=$1
+    file=$2
+
+    if grep -q $"	" $file
+    then
+        echo "Bad editor!  Tab characters found in $file"
+        return 1
+    else
+        return 0
+    fi
+}
+
+function run_check {
+    run_type=$1
+    display_name=$2
+    file_ext=$3  # the file extension to check against
+    callback=$4  # callback should take the file to check (temp file) and the original file name
+
+    bypass_this=`eval echo '${bypass_'"${run_type}"'}'`
+
+    if [ "$bypass_this" == "1" ] || [ -e ${src_dir}/bypass_${run_type} ]
+    then
+        echo "Bypassing ${display_name} check"
+        rm $src_dir/bypass_${run_type} 2> /dev/null  # don't bypass the check next time.
+        export bypass_${run_type}=1
+    else
+        # Only check staged files that match the extension.
+        # The --diff-filter option matches everything except for (D)eleted files
+        files=`git diff --staged --name-only --diff-filter=ACMRTUXB | grep "\.${file_ext}\$"`
+        for file in $files
+        do
+            echo "Running ${display_name} on ${file}"
+            temp_file=$(get_temp_file)
+            git show :0:$file > $temp_file  # check the staged version of the file
+            $callback $temp_file $file
+            ret=$?
+            rm $temp_file  # cleanup the temp file, the callback should never exit
+            if [ $ret -ne 0 ]
+            then
+                echo "Not committing since there are ${display_name} errors"
+                exit 1
+            fi
+        done
+    fi
+}
+
+run_check pyflakes PyFlakes py pyflakes_check
+run_check pep8 PEP8 py pep8_check
+run_check jslint JSLint js jslint_check
+run_check csslint CSSLint css csslint_check
+run_check tab_char TabChar html tab_char_check
+run_check tab_char TabChar js tab_char_check
+run_check tab_char TabChar sh tab_char_check

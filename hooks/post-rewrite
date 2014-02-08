@@ -1,0 +1,4 @@
+#!/bin/bash
+
+current_dir=`pwd`
+$current_dir/githooks/update_githooks.sh
