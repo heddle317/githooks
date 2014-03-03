@@ -3,7 +3,6 @@
 #     bypass_pyflakes
 #     bypass_pep8
 #     bypass_jslint
-#     bypass_csslint
 #     bypass_jinja2
 #     bypass_tab_char
 #
@@ -45,15 +44,6 @@ function jslint_check {
     file=$2
 
     rhino ./githooks/jslint/jslint.js $temp_file | sed -e "s@${temp_file}@${file}@"
-    return ${PIPESTATUS[0]}
-}
-
-function csslint_check {
-    temp_file=$1
-    file=$2
-
-    csslint_args=`cat ./csslint/csslint_args`
-    rhino ./githooks/csslint/csslint-rhino.js $csslint_args $temp_file | sed -e "s@${temp_file}@${file}@"
     return ${PIPESTATUS[0]}
 }
 
@@ -107,7 +97,6 @@ function run_check {
 run_check pyflakes PyFlakes py pyflakes_check
 run_check pep8 PEP8 py pep8_check
 run_check jslint JSLint js jslint_check
-run_check csslint CSSLint css csslint_check
 run_check tab_char TabChar html tab_char_check
 run_check tab_char TabChar js tab_char_check
 run_check tab_char TabChar sh tab_char_check
