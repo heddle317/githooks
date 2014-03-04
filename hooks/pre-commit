@@ -2,8 +2,6 @@
 # To skip any of these checks touch any of these bypass_* files in the main directory
 #     bypass_pyflakes
 #     bypass_pep8
-#     bypass_jslint
-#     bypass_jinja2
 #     bypass_tab_char
 #
 # To bypass PyFlakes checking for a particular line, add '# bypass_pyflakes' as an inline comment
@@ -36,14 +34,6 @@ function pep8_check {
     file=$2
 
     ./githooks/pep8/pep8.py --repeat --show-source --statistics --count --ignore=E501,E121,E126,E128 $temp_file | sed -e "s@${temp_file}@${file}@"
-    return ${PIPESTATUS[0]}
-}
-
-function jslint_check {
-    temp_file=$1
-    file=$2
-
-    rhino ./githooks/jslint/jslint.js $temp_file | sed -e "s@${temp_file}@${file}@"
     return ${PIPESTATUS[0]}
 }
 
@@ -96,7 +86,6 @@ function run_check {
 
 run_check pyflakes PyFlakes py pyflakes_check
 run_check pep8 PEP8 py pep8_check
-run_check jslint JSLint js jslint_check
 run_check tab_char TabChar html tab_char_check
 run_check tab_char TabChar js tab_char_check
 run_check tab_char TabChar sh tab_char_check
