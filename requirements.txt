@@ -1,2 +1,4 @@
 jslint==0.6.0
+pep8==1.4.6
 pyflakes==0.7.3
+wsgiref==0.1.2
