@@ -33,7 +33,7 @@ function pep8_check {
     temp_file=$1
     file=$2
 
-    ./githooks/pep8/pep8.py --repeat --show-source --statistics --count --ignore=E501,E121,E126,E128 $temp_file | sed -e "s@${temp_file}@${file}@"
+    pep8 --repeat --show-source --statistics --count --ignore=E501,E121,E126,E128 $temp_file | sed -e "s@${temp_file}@${file}@"
     return ${PIPESTATUS[0]}
 }
 
